@@ -25,7 +25,44 @@ namespace Journal
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
+			//ADD USER AUTH through JWT
+			services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+				.AddCookie(options =>
+				{
+					options.LoginPath = "/Account/Login";
+					options.Events.OnRedirectToLogin = (context) =>
+					  {
+						  context.Response.StatusCode = 401;
+						  return Task.CompletedTask;
+					  };
+				});
+			services.AddCors(options =>
+			{
+				options.AddPolicy("CorsDevPolicy", builder =>
+				{
+					builder
+						.WithOrigins(new string[]{
+							"http://localhost:8080"
+						})
+						.AllowAnyMethod()
+						.AllowAnyHeader()
+						.AllowCredentials();
+				});
+			});
+
 			services.AddControllers();
+
+			//CONNECT TO DB
+			services.AddScoped<IDbConnection>(x => CreateDbConnection());
+
+			//NOTE: REGISTER SERVICES
+		}
+
+		//FIXME: This MySqlConnection needs to be converted to mongoDB
+		private IDbConnection CreateDbConnection()
+		{
+			string connectionString = Configuration.GetSection("DB").GetValue<string>("gearhost");
+			return new MySqlConnection(connectionString);
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -34,14 +71,19 @@ namespace Journal
 			if (env.IsDevelopment())
 			{
 				app.UseDeveloperExceptionPage();
+				app.UseCors("CorsDevPolicy");
+			}
+			else
+			{
+				app.UseHsts();
 			}
 
 			app.UseHttpsRedirection();
-
+			app.UseAuthentication();
 			app.UseRouting();
-
 			app.UseAuthorization();
-
+			app.UseDefaultFiles();
+			app.UseStaticFiles();
 			app.UseEndpoints(endpoints =>
 			{
 				endpoints.MapControllers();
