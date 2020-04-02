@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import ValueSchema from "../models/Value";
+import ValueSchema from "../models/Question";
 import ProfileSchema from "../models/Profile";
 
 class DbContext {
